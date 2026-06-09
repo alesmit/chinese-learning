@@ -7,19 +7,19 @@ const { WaveFile } = require('wavefile');
 // Input data
 const lessonData = [
     { english: "I want to eat watermelon", chinese: "我想吃西瓜。" },
-    { english: "I am eating watermelon", chinese: "我在吃西瓜。" },
-    { english: "I ate watermelon", chinese: "我吃了西瓜。" },
-    { english: "I will eat watermelon", chinese: "我要吃西瓜。" },
-    { english: "Do you want to eat watermelon?", chinese: "你想吃西瓜吗？" },
-    { english: "Are you eating watermelon?", chinese: "你在吃西瓜吗？" },
+    { english: "I am eating ice-cream", chinese: "我在吃冰淇淋。" },
+    { english: "I ate eggs", chinese: "我吃了鸡蛋。" },
+    { english: "I will eat rice", chinese: "我要吃米饭。" },
+    { english: "Do you want to eat pineapple?", chinese: "你想吃菠萝吗？" },
+    { english: "Are you eating rice?", chinese: "你在吃米饭吗？" },
     { english: "What are you eating?", chinese: "你在吃什么？" },
     { english: "What did you eat?", chinese: "你吃了什么？" },
     { english: "I want to drink beer", chinese: "我想喝啤酒。" },
-    { english: "I am drinking beer", chinese: "我在喝啤酒。" },
-    { english: "I drank beer", chinese: "我喝了啤酒。" },
-    { english: "I will drink beer", chinese: "我要喝啤酒。" },
-    { english: "Do you want to drink beer?", chinese: "你想喝啤酒吗？" },
-    { english: "Are you drinking beer?", chinese: "你在喝啤酒吗？" },
+    { english: "I am drinking water", chinese: "我在喝水。" },
+    { english: "I drank coffee", chinese: "我喝了咖啡。" },
+    { english: "I will drink cola", chinese: "我要喝可乐。" },
+    { english: "Do you want to drink water?", chinese: "你想喝水吗？" },
+    { english: "Are you drinking coffee?", chinese: "你在喝咖啡吗？" },
     { english: "What are you drinking?", chinese: "你在喝什么？" },
     { english: "What did you drink?", chinese: "你喝了什么？" },
     { english: "I write a letter", chinese: "我写信。" },
@@ -27,37 +27,33 @@ const lessonData = [
     { english: "She writes a letter", chinese: "她写信。" },
     { english: "I study Chinese", chinese: "我学中文。" },
     { english: "I am studying Chinese", chinese: "我在学中文。" },
-    { english: "I studied Chinese", chinese: "我学了中文。" }
+    { english: "I studied Chinese", chinese: "我学了中文。" },
+    { english: "I speak Italian, English, and Spanish", chinese: "我会说意大利语、英语和西班牙语。" },
+    { english: "Do you speak English?", chinese: "你会说英语吗？" }
 ];
 
 // Output audio file
 const OUTPUT_FILE = path.join(__dirname, 'output.wav');
 
-// Use AI Chinese voice generation
-const USE_AI_MODEL = true;
-
 // Pauses
-const PAUSE_AFTER_ENGLISH_MS = 400;
-const PAUSE_AFTER_CHINESE_MS = 2800;
+const SHORT_PAUSE_MS = 500;
+const LONG_PAUSE_MS = 3000;
 
 // Volume
 const TARGET_VOLUME_PEAK = 0.80;
 const ENGLISH_VOLUME_PEAK = 0.50;
 
 // English voice settings
-const ENGLISH_SPEED = 1.0;
+const ENGLISH_SPEED = 0.75;
 
-// Non-AI Chinese voice settings
-const CHINESE_VOICE = 'Tingting';
-const CHINESE_SPEED = 0.85; // Slightly slower for better learning clear tones
-const CHINESE_SAMPLE_RATE = 22050; // Standard OS text-to-speech output rate
-
-// AI Chinese voice settings
+// Chinese voice settings
+const CHINESE_VOICE = 'Tingting'; // Only applies to OS TTS
+const CHINESE_SAMPLE_RATE = 22050; // Output rate, only applies to OS TTS
+const CHINESE_SPEED = 1.0;
+const CHINESE_LENGTH_SCALE = 1.2; // Higher values produce a slower output, for better learning clear tones
 const NOISE_SCALE = 0;
 const NOISE_SCALE_W = 0;
 const VOICE_ACTOR_ID = 160; // 0-173
-
-let MODEL_SAMPLE_RATE = CHINESE_SAMPLE_RATE; // Default fallback
 
 const ttsConfig = {
     model: {
@@ -68,7 +64,7 @@ const ttsConfig = {
             dataDir: "",
             noiseScale: NOISE_SCALE,
             noiseScaleW: NOISE_SCALE_W,
-            lengthScale: 1.0
+            lengthScale: CHINESE_LENGTH_SCALE,
         },
         numThreads: 2,
         debug: 0,
@@ -76,13 +72,9 @@ const ttsConfig = {
     }
 };
 
-let tts = null;
-if (USE_AI_MODEL) {
-    // Only initialize the engine if we actually need it
-    tts = new sherpa_onnx.OfflineTts(ttsConfig);
-    console.log(`Detected AI Model Sample Rate: ${tts.sampleRate}Hz`);
-    MODEL_SAMPLE_RATE = tts.sampleRate;
-}
+const tts = new sherpa_onnx.OfflineTts(ttsConfig);
+console.log(`Detected AI Model Sample Rate: ${tts.sampleRate}Hz`);
+const MODEL_SAMPLE_RATE = tts.sampleRate || CHINESE_SAMPLE_RATE;
 
 /**
  * Scans a 16-bit Int PCM buffer, detects its highest peak, and scales 
@@ -140,7 +132,7 @@ function generateEnglishPCM(text, targetSampleRate) {
                 
                 if (fs.existsSync(tempWav)) fs.unlinkSync(tempWav);
 
-                // Normalization Step: Brings English volume down to your specific lower ceiling
+                // Normalization: brings English volume down to a specific lower ceiling
                 normalizePCM(pcmData, ENGLISH_VOLUME_PEAK);
                 
                 resolve(pcmData);
@@ -164,7 +156,7 @@ function generateChinesePCM(text, targetSampleRate) {
                 const wavBuffer = fs.readFileSync(tempWav);
                 const wav = new WaveFile(wavBuffer);
                 
-                // Resample the OS Chinese voice to match whatever rate you want your final master file to be
+                // Resample the OS Chinese voice to match the rate of the final master file
                 wav.toSampleRate(targetSampleRate);
                 wav.toBitDepth('16');
 
@@ -172,7 +164,7 @@ function generateChinesePCM(text, targetSampleRate) {
                 
                 if (fs.existsSync(tempWav)) fs.unlinkSync(tempWav);
 
-                // Normalization Step
+                // Normalization
                 normalizePCM(pcmData, TARGET_VOLUME_PEAK);
                 
                 resolve(pcmData);
@@ -200,7 +192,7 @@ function generateChinesePCMWithAI(text) {
         pcmBuffer.writeInt16LE(intSample, n * 2);
     }
 
-    // Normalization Step: Boosts Chinese volume up to match target ceiling
+    // Normalization
     normalizePCM(pcmBuffer, TARGET_VOLUME_PEAK);
 
     return pcmBuffer;
@@ -211,12 +203,12 @@ async function main() {
         console.log("Starting audio generation...");
         
         // Calculate the exact number of 16-bit mono bytes needed per millisecond
-        // Formula: (Samples Per Sec * 2 Bytes Per Sample) / 1000 ms Per Sec
-        const englishPauseSamples = Math.floor((MODEL_SAMPLE_RATE * PAUSE_AFTER_ENGLISH_MS) / 1000);
-        const englishPauseBuffer = Buffer.alloc(englishPauseSamples * 2); 
+        // Formula: (samples per sec * 2 bytes per sample) / 1000ms per sec
+        const shortPauseSamples = Math.floor((MODEL_SAMPLE_RATE * SHORT_PAUSE_MS) / 1000);
+        const shortPauseBuffer = Buffer.alloc(shortPauseSamples * 2);
 
-        const chinesePauseSamples = Math.floor((MODEL_SAMPLE_RATE * PAUSE_AFTER_CHINESE_MS) / 1000);
-        const chinesePauseBuffer = Buffer.alloc(chinesePauseSamples * 2); 
+        const longPauseSamples = Math.floor((MODEL_SAMPLE_RATE * LONG_PAUSE_MS) / 1000);
+        const longPauseBuffer = Buffer.alloc(longPauseSamples * 2);
 
         const rawAudioPayloads = [];
 
@@ -228,23 +220,23 @@ async function main() {
                 console.log(` 🗣️ English: "${item.english}"`);
                 const enPcm = await generateEnglishPCM(item.english, MODEL_SAMPLE_RATE);
                 rawAudioPayloads.push(enPcm);
-                rawAudioPayloads.push(englishPauseBuffer);
+                rawAudioPayloads.push(shortPauseBuffer);
             }
 
             if (item.chinese && item.chinese.trim() !== "") {
                 console.log(` 🗣️ Chinese: "${item.chinese}"`);
-                
-                let zhPcm;
-                if (USE_AI_MODEL) {
-                    zhPcm = generateChinesePCMWithAI(item.chinese);
-                } else {
-                    zhPcm = await generateChinesePCM(item.chinese, MODEL_SAMPLE_RATE);
-                }
 
+                // Generate OS TTS
+                let zhPcm = await generateChinesePCM(item.chinese, MODEL_SAMPLE_RATE);
                 rawAudioPayloads.push(zhPcm);
+                rawAudioPayloads.push(shortPauseBuffer);
 
+                // Also generate synthesis with AI to have an extra, more realistic, reference
+                zhPcm = generateChinesePCMWithAI(item.chinese);
+                rawAudioPayloads.push(zhPcm);
+                
                 if (i < lessonData.length - 1) {
-                    rawAudioPayloads.push(chinesePauseBuffer);
+                    rawAudioPayloads.push(longPauseBuffer);
                 }
             }
             console.log("");
