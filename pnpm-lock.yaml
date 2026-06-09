@@ -8,11 +8,24 @@ importers:
 
   .:
     dependencies:
+      say:
+        specifier: ^0.16.0
+        version: 0.16.0
       sherpa-onnx-node:
         specifier: ^1.13.2
         version: 1.13.2
+      wavefile:
+        specifier: ^11.0.0
+        version: 11.0.0
 
 packages:
+
+  one-time@0.0.4:
+    resolution: {integrity: sha512-qAMrwuk2xLEutlASoiPiAMW3EN3K96Ka/ilSXYr6qR1zSVXw2j7+yDSqGTC4T9apfLYxM3tLLjKvgPdAUK7kYQ==}
+
+  say@0.16.0:
+    resolution: {integrity: sha512-yEfncNu3I6lcZ6RIrXgE9DqbrEmvV5uQQ8ReM14u/DodlvJYpveqNphO55RLMSj77b06ZKNif/FLmhzQxcuUXg==}
+    engines: {node: '>=6.9'}
 
   sherpa-onnx-darwin-arm64@1.13.2:
     resolution: {integrity: sha512-sakY1+WH/Va/vhzwlhIKXaMr0ioKsJ55w785QH+VDFyUqq1+2InbmB3BgX5gyYKeuW40R0U0IW5c7wnMArhpdw==}
@@ -47,7 +60,18 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  wavefile@11.0.0:
+    resolution: {integrity: sha512-/OBiAALgWU24IG7sC84cDO/KfFuvajWc5Uec0oV2zrpOOZZDgGdOwHwgEzOrwh8jkubBk7PtZfQBIcI1OaE5Ng==}
+    engines: {node: '>=8'}
+    hasBin: true
+
 snapshots:
+
+  one-time@0.0.4: {}
+
+  say@0.16.0:
+    dependencies:
+      one-time: 0.0.4
 
   sherpa-onnx-darwin-arm64@1.13.2:
     optional: true
@@ -75,3 +99,5 @@ snapshots:
 
   sherpa-onnx-win-x64@1.13.2:
     optional: true
+
+  wavefile@11.0.0: {}
