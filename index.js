@@ -6,54 +6,47 @@ const { WaveFile } = require('wavefile');
 
 // Input data
 const lessonData = [
-    { english: "I want to eat watermelon", chinese: "我想吃西瓜。" },
-    { english: "I am eating ice-cream", chinese: "我在吃冰淇淋。" },
-    { english: "I ate eggs", chinese: "我吃了鸡蛋。" },
-    { english: "I will eat rice", chinese: "我要吃米饭。" },
-    { english: "Do you want to eat pineapple?", chinese: "你想吃菠萝吗？" },
-    { english: "Are you eating rice?", chinese: "你在吃米饭吗？" },
-    { english: "What are you eating?", chinese: "你在吃什么？" },
-    { english: "What did you eat?", chinese: "你吃了什么？" },
-    { english: "I want to drink beer", chinese: "我想喝啤酒。" },
-    { english: "I am drinking water", chinese: "我在喝水。" },
-    { english: "I drank coffee", chinese: "我喝了咖啡。" },
-    { english: "I will drink cola", chinese: "我要喝可乐。" },
-    { english: "Do you want to drink water?", chinese: "你想喝水吗？" },
-    { english: "Are you drinking coffee?", chinese: "你在喝咖啡吗？" },
-    { english: "What are you drinking?", chinese: "你在喝什么？" },
-    { english: "What did you drink?", chinese: "你喝了什么？" },
-    { english: "I write a letter", chinese: "我写信。" },
-    { english: "You write a letter", chinese: "你写信。" },
-    { english: "She writes a letter", chinese: "她写信。" },
-    { english: "I study Chinese", chinese: "我学中文。" },
-    { english: "I am studying Chinese", chinese: "我在学中文。" },
-    { english: "I studied Chinese", chinese: "我学了中文。" },
-    { english: "I speak Italian, English, and Spanish", chinese: "我会说意大利语、英语和西班牙语。" },
-    { english: "Do you speak English?", chinese: "你会说英语吗？" }
+    { english: "The ice cream is 13 Yuan.", chinese: "冰激凌十三元。" },
+    { english: "How much does this cost?", chinese: "这个多少钱？" },
+    { english: "Is this fourteen or forty?", chinese: "这是十四还是四十？" },
+    { english: "Five hundred Yuan.", chinese: "五百元。" },
+    { english: "Ten thousand Yuan.", chinese: "一万元。" },
+    { english: "I am playing on the computer.", chinese: "我在玩电脑。" },
+    { english: "She is watching a movie.", chinese: "她在看电影。" },
+    { english: "What is mom listening to?", chinese: "妈妈在听什么？" },
+    { english: "I don't eat this.", chinese: "我不吃这个。" },
+    { english: "She is drinking beer.", chinese: "她在喝啤酒。" },
+    { english: "I am at home.", chinese: "我在家。" },
+    { english: "He is not at school.", chinese: "他不在学校。" },
+    { english: "Where are you? I am at school.", chinese: "你在哪里？我在学校。" },
+    { english: "It's cold here, but over there is very happy.", chinese: "这里很冷，那里很高兴。" },
+    { english: "Which movie do you like?", chinese: "你喜欢哪个电影？" },
+    { english: "This is my computer.", chinese: "这是我的电脑。" },
+    { english: "Is that your car?", chinese: "那是你的车吗？" },
+    { english: "Is that your dad's car? No, it's my mom's.", chinese: "那是你爸爸的车吗？不，是我妈妈的。" }
 ];
 
 // Output audio file
 const OUTPUT_FILE = path.join(__dirname, 'output.wav');
 
 // Pauses
-const SHORT_PAUSE_MS = 500;
-const LONG_PAUSE_MS = 3000;
+const SHORT_PAUSE_MS = 600;
+const LONG_PAUSE_MS = 3400;
 
 // Volume
 const TARGET_VOLUME_PEAK = 0.80;
 const ENGLISH_VOLUME_PEAK = 0.50;
 
 // English voice settings
-const ENGLISH_SPEED = 0.75;
+const ENGLISH_SPEED = 0.7;
 
 // Chinese voice settings
-const CHINESE_VOICE = 'Tingting'; // Only applies to OS TTS
-const CHINESE_SAMPLE_RATE = 22050; // Output rate, only applies to OS TTS
-const CHINESE_SPEED = 1.0;
-const CHINESE_LENGTH_SCALE = 1.2; // Higher values produce a slower output, for better learning clear tones
-const NOISE_SCALE = 0;
-const NOISE_SCALE_W = 0;
-const VOICE_ACTOR_ID = 160; // 0-173
+const CHINESE_SAMPLE_RATE = 22050;
+const CHINESE_SPEED = 0.5;
+const CHINESE_SPEED_AI = 1.0;
+const CHINESE_LENGTH_SCALE = 1.1; // Higher values produce a slower output, for better learning clear tones
+const NOISE_SCALE = 0.0;
+const NOISE_SCALE_W = 0.0;
 
 const ttsConfig = {
     model: {
@@ -149,7 +142,7 @@ function generateChinesePCM(text, targetSampleRate) {
         const tempWav = path.join(__dirname, `temp_zh_${Date.now()}.wav`);
 
         // Export the Chinese text using the system voice
-        say.export(text, CHINESE_VOICE, CHINESE_SPEED, tempWav, (err) => {
+        say.export(text, 'Tingting', CHINESE_SPEED, tempWav, (err) => {
             if (err) return reject(err);
 
             try {
@@ -177,8 +170,10 @@ function generateChinesePCM(text, targetSampleRate) {
 }
 
 function generateChinesePCMWithAI(text) {
-    const audioSample = tts.generate({ text, sid: VOICE_ACTOR_ID, speed: CHINESE_SPEED });
-    
+    // Voice actor.
+    const sid = Math.floor(Math.random() * tts.numSpeakers);
+
+    const audioSample = tts.generate({ text, sid, speed: CHINESE_SPEED_AI });
     if (!audioSample || !audioSample.samples) {
         throw new Error(`Inference returned empty data for block: ${text}`);
     }
@@ -210,6 +205,7 @@ async function main() {
         const longPauseSamples = Math.floor((MODEL_SAMPLE_RATE * LONG_PAUSE_MS) / 1000);
         const longPauseBuffer = Buffer.alloc(longPauseSamples * 2);
 
+        const zhAiTranslations = 2;
         const rawAudioPayloads = [];
 
         for (let i = 0; i < lessonData.length; i++) {
@@ -231,12 +227,11 @@ async function main() {
                 rawAudioPayloads.push(zhPcm);
                 rawAudioPayloads.push(shortPauseBuffer);
 
-                // Also generate synthesis with AI to have an extra, more realistic, reference
-                zhPcm = generateChinesePCMWithAI(item.chinese);
-                rawAudioPayloads.push(zhPcm);
-                
-                if (i < lessonData.length - 1) {
-                    rawAudioPayloads.push(longPauseBuffer);
+                for (let i = 1; i <= zhAiTranslations; i++) {
+                    // Also generate more synthesis with AI to have extra, more realistic, references
+                    zhPcm = generateChinesePCMWithAI(item.chinese);
+                    rawAudioPayloads.push(zhPcm);
+                    rawAudioPayloads.push(i === zhAiTranslations ? longPauseBuffer : shortPauseBuffer);
                 }
             }
             console.log("");
